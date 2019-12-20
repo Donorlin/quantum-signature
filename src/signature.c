@@ -2,6 +2,7 @@
 #include "aes.h"
 #include "aesconstants.h"
 #include <sodium.h>
+#include <memory.h>
 
 // permute only 16 .. SECRETPERMUTATIONSIZE
 static void random_permutation(uint8_t *perm) {
@@ -54,17 +55,22 @@ vector_matrix_multiplication(const uint8_t *vector, const int vector_size, const
 }
 
 static void aes_constants(AES_KEY *aes_key, uint8_t *constants) {
-    int i, c, key;
+    int i, j, c, key;
     uint8_t key_8[16]; // for aes round key
+    uint8_t mul_res[16];
 
-    // start at 16, we want 16 bytes of 0, 16 bytes of constant, 16 bytes of zero, 16 bytes of constants ...
-    c = 16;
-    for (key = 0, i = 0; key < 44; key += 4, i++) { // we have 10 round -> 44 x 32 bits (4 * (10 + 1))
+    // odd = zero
+    // even = byte from a round_key * linear_layer_matrix_inverse
+    c = 1;
+    for (key = 4, i = 0; key < 44; key += 4, i++) { // we have 10 round -> 44 x 32 bits (4 * (10 + 1))
         // put aes round key to 8bit vector
         PUTU32(key_8, aes_key->rd_key[key]);
         PUTU32(key_8 + 4, aes_key->rd_key[key + 1]);
         PUTU32(key_8 + 8, aes_key->rd_key[key + 2]);
         PUTU32(key_8 + 12, aes_key->rd_key[key + 3]);
+
+        // clear mul_res
+        memset(mul_res, 0, sizeof(mul_res));
 
         // round_key x linear_layer_matrix_inverse and store result in constants
         vector_matrix_multiplication(
@@ -73,11 +79,12 @@ static void aes_constants(AES_KEY *aes_key, uint8_t *constants) {
                 linear_layer_matrix_inverse,
                 16,
                 16,
-                constants + c
+                mul_res
         );
 
-        // move constant position
-        c += 32;
+        for (j = 0; j < 16; j++, c += 2) {
+            *(constants + c) = mul_res[j];
+        }
     }
 }
 
