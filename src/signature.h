@@ -1,52 +1,40 @@
-#include <stdlib.h>
-
 #ifndef SIGNATURE_H
 #define SIGNATURE_H
 
+#include <stdlib.h>
+#include <inttypes.h>
+
 // for xor-able data types
-#define SWAP(a, b) \
+#define SWAP_TYPED(type, a, b) \
     { \
-        (a) ^= (b); \
-        (b) ^= (a); \
-        (a) ^= (b); \
+        type __swap_temp; \
+        __swap_temp = (b); \
+        (b) = (a); \
+        (a) = __swap_temp; \
     }
 
-// ################# AES #################
-# define AES_NS 16
-# define AES_NR 10
+// AES
+typedef struct aes_public_key_st {
+    uint8_t q[144]; // 1152 bits
+    uint8_t Q[25344]; // 1152 x 1408 bits
+} AesPublicKey;
 
-struct aes_public_key_st {
-    uint64_t q[((2 * AES_NS * AES_NR) - (AES_NS * (AES_NR + 1))) / 8]; // (number of sbox inputs and ouputs) * number of rounds * number of rounds
-    int q_size; // ((2 * AES_NS * AES_NR) - (AES_NS * (AES_NR + 1))) / 8
+typedef struct aes_private_key_st {
+    uint8_t key[16]; // 128 bits
+    uint8_t permutation[160]; // 1 .. 160, can use uint8_t
+} AesPrivateKey;
 
-    uint64_t Q[(AES_NS * AES_NR * AES_NS * (AES_NR + 1)) / 32];
-    int Q_nrows; // AES_NS * AES_NR / 4
-    int Q_ncols; // AES_NS * (AES_NR + 1) / 8
-};
-typedef struct aes_public_key_st AES_PUBLIC_KEY;
+typedef struct aes_signature_st {
+    uint8_t nonce[16]; // we are working with 128 bit nonce
+    uint8_t w[160];
+} AesSignature;
 
-struct aes_private_key_st {
-    uint8_t *user_key;
-    int user_key_bits;
-    int permutation[AES_NS * AES_NR];
-    int permutation_size;
-};
-typedef struct aes_private_key_st AES_PRIVATE_KEY;
+int AES_key_pair_generation(AesPublicKey *public_key, AesPrivateKey *private_key);
 
-struct aes_signature_st {
-    uint8_t *nonce;
-    int nonce_bits;
+void AES_sign_message(const char *message, const AesPrivateKey *private_key, AesSignature *signature);
 
-    uint8_t w[AES_NS * AES_NR];
-    int nw;
-};
-typedef struct aes_signature_st AES_SIGNATURE;
+int AES_verify_signature(const char *message, const AesSignature *signature, const AesPublicKey *public_key);
 
-void AES_key_pair_generation(const uint8_t *user_key, const int bits, AES_PUBLIC_KEY *public_key,
-                             AES_PRIVATE_KEY *private_key);
-
-void AES_sign_message(const char *message, const AES_PRIVATE_KEY *private_key);
-
-void AES_verify_signature(const char *message, const AES_SIGNATURE *signature, const AES_PUBLIC_KEY *public_key);
+// AES end
 
 #endif //SIGNATURE_H
