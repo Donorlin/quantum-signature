@@ -26,6 +26,24 @@ static void random_bits_128(uint8_t *rnd) {
     PUTU32(rnd + 12, randombytes_random());
 }
 
+// we permute pairs of bytes
+// permutation is always of size 160 and vector of size 320
+static void apply_permutation(uint8_t *vector, const uint8_t *permutation) {
+    uint8_t ind = 0;
+
+    for (int i = 0; i < (160 - 1); i++) {
+        // get next index
+        ind = permutation[i];
+        while (ind < i) {
+            ind = permutation[ind];
+        }
+
+        // swap elements in array
+        SWAP_TYPED(uint8_t, vector[2 * i], vector[2 * ind]);
+        SWAP_TYPED(uint8_t, vector[2 * i + 1], vector[2 * ind + 1]);
+    }
+}
+
 // section 2.4 Finite Field Multiplication Using Tables
 // http://techheap.packetizer.com/cryptography/encryption/spec.v36.pdf
 static uint8_t mul_look_up(uint8_t a, uint8_t b) {
@@ -89,6 +107,7 @@ static void aes_constants(AES_KEY *aes_key, uint8_t *constants) {
 }
 
 int AES_key_pair_generation(AesPublicKey *public_key, AesPrivateKey *private_key) {
+    int i;
     AES_KEY aes_key;
     uint8_t constants[320] = {0};
 
@@ -107,6 +126,19 @@ int AES_key_pair_generation(AesPublicKey *public_key, AesPrivateKey *private_key
 
     // fill algorithm constants
     aes_constants(&aes_key, constants);
+
+    // apply secret random permutation on constants
+    apply_permutation(constants, private_key->permutation);
+
+    // apply secret random permutation on spn matrix
+    // first we need a copy of it
+    uint8_t aes_spn_matrix_copy[56320];
+    memcpy(aes_spn_matrix_copy, aes_spn_matrix, sizeof(aes_spn_matrix));
+
+    // permute its columns
+    for (i = 0; i < 176; i++) {
+        apply_permutation(aes_spn_matrix_copy + i * 320, private_key->permutation);
+    }
 
     return 0;
 }

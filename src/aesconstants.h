@@ -15,5 +15,7 @@ extern const uint8_t galois_256_anti_logs[256];
 // 16x16
 extern const uint8_t galois_256_logs[256];
 
+// 176 x 320
+extern const uint8_t aes_spn_matrix[56320];
 
 #endif
