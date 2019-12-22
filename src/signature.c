@@ -4,6 +4,88 @@
 #include <sodium.h>
 #include <memory.h>
 
+
+// section 2.4 Finite Field Multiplication Using Tables
+// http://techheap.packetizer.com/cryptography/encryption/spec.v36.pdf
+static uint8_t mul_look_up(uint8_t a, uint8_t b) {
+    uint16_t t = 0;
+
+    if (a == 0 || b == 0) {
+        return 0;
+    }
+    t = galois_256_logs[a] + galois_256_logs[b];
+    if (t > 0xff) {
+        t = t - 0xff;
+    }
+
+    return galois_256_anti_logs[t];
+}
+
+// section 2.4 Finite Field Multiplication Using Tables
+// http://techheap.packetizer.com/cryptography/encryption/spec.v36.pdf
+static uint8_t inverse_look_up(uint8_t a) {
+    if (a == 0) {
+        return 0;
+    }
+
+    return galois_256_anti_logs[0xff - galois_256_logs[a]];
+}
+
+static void swap_rows(uint8_t *a, const int i, const int pivot, const int cols) {
+    int j;
+    for (j = 0; j < cols; j++) {
+        SWAP_TYPED(uint8_t, a[pivot * cols + j], a[i * cols + j]);
+    }
+}
+
+static void row_reduced_echelon_form(uint8_t *matrix, const int nrows, const int ncols, const int start_col) {
+    int i, j, col, row, pivot;
+    uint8_t scale;
+
+    row = 0;
+    for (col = start_col; col < ncols && row < nrows; col++) {
+        pivot = row;
+
+        for (i = row + 1; i < nrows; i++) {
+            if (matrix[i * ncols + col] > matrix[pivot * ncols + col]) {
+                pivot = i;
+            }
+        }
+
+        if (matrix[pivot * ncols + col] == 0) {
+            printf("The matrix is singular.\n");
+            return;
+        }
+
+        if (row != pivot) {
+            swap_rows(matrix, row, pivot, ncols);
+        }
+
+        for (i = row + 1; i < nrows; i++) {
+            scale = mul_look_up(matrix[i * ncols + col], inverse_look_up(matrix[row * ncols + col]));
+            for (j = col + 1; j < ncols; j++) {
+                matrix[i * ncols + j] ^= mul_look_up(matrix[row * ncols + j], scale);
+            }
+
+            matrix[i * ncols + col] = 0x00;
+        }
+
+        if (matrix[row * ncols + col] != 0x00) {
+            for (i = ncols - 1; i > col - 1; i--) {
+                matrix[row * ncols + i] = mul_look_up(matrix[row * ncols + i], inverse_look_up(matrix[row * ncols + col]));
+            }
+
+            for (i = 0; i < row; i++) {
+                for (j = ncols - 1; j > col - 1; j--) {
+                    matrix[i * ncols + j] ^= mul_look_up(matrix[i * ncols + col], matrix[row * ncols + j]);
+                }
+            }
+        }
+
+        row++;
+    }
+}
+
 // permute only 16 .. SECRETPERMUTATIONSIZE
 static void random_permutation(uint8_t *perm) {
     uint8_t i;
@@ -44,21 +126,6 @@ static void apply_permutation(uint8_t *vector, const uint8_t *permutation) {
     }
 }
 
-// section 2.4 Finite Field Multiplication Using Tables
-// http://techheap.packetizer.com/cryptography/encryption/spec.v36.pdf
-static uint8_t mul_look_up(uint8_t a, uint8_t b) {
-    uint16_t t = 0;
-
-    if (a == 0 || b == 0) {
-        return 0;
-    }
-    t = galois_256_logs[a] + galois_256_logs[b];
-    if (t > 0xff) {
-        t = t - 0xff;
-    }
-
-    return galois_256_anti_logs[t];
-}
 
 static void
 vector_matrix_multiplication(const uint8_t *vector, const int vector_size, const uint8_t *matrix,
@@ -139,6 +206,8 @@ int AES_key_pair_generation(AesPublicKey *public_key, AesPrivateKey *private_key
     for (i = 0; i < 176; i++) {
         apply_permutation(aes_spn_matrix_copy + i * 320, private_key->permutation);
     }
+
+    // TODO: systematic parity check matrix
 
     return 0;
 }
