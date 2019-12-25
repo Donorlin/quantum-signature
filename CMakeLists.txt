@@ -9,13 +9,15 @@ set(SOURCE_FILES
         src/main.c
         src/aes.c
         src/aes.h
-        src/signature.h
-        src/signature.c
+        src/aessignature.h
+        src/aessignature.c
         src/aesconstants.h
-        src/aesconstants.c)
+        src/aesconstants.c
+        src/galois256.c
+        src/galois256.h)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(libsodium)
 
 add_executable(Signature ${SOURCE_FILES})
-target_link_libraries(Signature libsodium)
+target_link_libraries(Signature sodium)

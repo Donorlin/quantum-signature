@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "signature.h"
+#include "aessignature.h"
 
 int main() {
 //    const unsigned char key[] = {
@@ -23,9 +23,9 @@ int main() {
 //        printf("%X\n",*(sbox_inputs.sbox_inputs + i));
 //    }
 
-    AesPublicKey aesPublicKey;
-    AesPrivateKey aesPrivateKey;
-    AES_key_pair_generation(&aesPublicKey, &aesPrivateKey);
+    AesSignaturePublicKey aesPublicKey;
+    AesSignaturePrivateKey aesPrivateKey;
+    AES_signature_key_pair_generation(&aesPublicKey, &aesPrivateKey);
 
 //    printf("original:\t");
 //    int i;
