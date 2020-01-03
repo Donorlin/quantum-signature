@@ -23,9 +23,15 @@ typedef struct aes_signature_st {
 
 int AES_signature_key_pair_generation(AesSignaturePublicKey *public_key, AesSignaturePrivateKey *private_key);
 
-void AES_signature_sign(const char *message, const AesSignaturePrivateKey *private_key, AesSignature *signature);
+void AES_signature_sign(const uint8_t *message, size_t message_size,
+                        const AesSignaturePrivateKey *private_key, AesSignature *signature);
 
-int AES_signature_verify(const char *message, const AesSignature *signature, const AesSignaturePublicKey *public_key);
+int AES_signature_verify(const uint8_t *message, size_t message_size, const AesSignature *signature,
+                         const AesSignaturePublicKey *public_key);
+
+// verify return codes
+#define SIGNATURE_OK 1
+#define SIGNATURE_INVALID 2
 
 // AES end
 

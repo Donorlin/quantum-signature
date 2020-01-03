@@ -21,18 +21,14 @@ struct aes_key_st {
 };
 typedef struct aes_key_st AES_KEY;
 
-struct aes_sbox_inputs_st {
-    uint8_t sbox_inputs[16 * AES_MAXNR];
-    int rounds;
-};
-typedef struct aes_sbox_inputs_st AES_SBOX_INPUTS;
+extern const uint8_t aes_s_box[256];
 
-int AES_set_encrypt_key(const unsigned char *user_key, const int bits, AES_KEY *key);
+int AES_set_encrypt_key(const unsigned char *user_key, int bits, AES_KEY *key);
 
-void AES_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key, AES_SBOX_INPUTS *sbox_inputs);
+void AES_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key, uint8_t *sbox_inputs);
 
 void AES_decrypt(const unsigned char *in, unsigned char *out, const AES_KEY *key);
 
-int AES_set_decrypt_key(const unsigned char *user_key, const int bits, AES_KEY *key);
+int AES_set_decrypt_key(const unsigned char *user_key, int bits, AES_KEY *key);
 
 #endif /* aes_h */
